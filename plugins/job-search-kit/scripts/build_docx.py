@@ -4,6 +4,7 @@
 Usage:
     python build_docx.py resume path/to/resume.md [-o out.docx] [--no-pdf]
     python build_docx.py cover  path/to/cover.md  [-o out.docx] [--no-pdf]
+    python build_docx.py --check
 """
 import argparse
 import math
@@ -42,6 +43,8 @@ BULLET_RE = re.compile(r"^[-*]\s+(.+)$")
 HR_RE = re.compile(r"[-_*]{3,}")
 UNSUPPORTED_RE = re.compile(r"^(#{5,}|#\S|\||>|\d+\.\s)")
 INLINE_BOLD_RE = re.compile(r"\*\*(.+?)\*\*")
+LINK_RE = re.compile(r"\[.+?\]\(.+?\)")
+ITALIC_RE = re.compile(r"(?<!\w)_[^_]+_(?!\w)")
 PDF_PAGE_RE = re.compile(rb"/Type\s*/Page(?![A-Za-z])")
 SOFFICE_CANDIDATES = [
     "C:/Program Files/LibreOffice/program/soffice.exe",
@@ -55,16 +58,46 @@ def stray_asterisk(text):
     return "*" in INLINE_BOLD_RE.sub("", text)
 
 
+def line_warnings(n, line):
+    """Warnings for markdown that would leak into the document as literal text."""
+    found = []
+    if EM_DASH in line:
+        found.append("em dash found, rewrite without it")
+    if LINK_RE.search(line):
+        found.append("markdown link will show as [text](url), write the plain URL instead")
+    if "`" in line:
+        found.append("backtick found, remove it")
+    if "<!--" in line:
+        found.append("HTML comment found, it will not appear in the document")
+    if ITALIC_RE.search(line):
+        found.append("_italic_ is not supported, the underscores will show")
+    if line.startswith(("+", "\u2022")):
+        found.append("bullet rendered as plain text, start bullets with '- '")
+    return [f"line {n}: {w}" for w in found]
+
+
+def _content_lines(text, warnings):
+    """Yield (line_number, stripped_line), warning on and skipping HTML comments."""
+    in_comment = False
+    for n, raw in enumerate(text.lstrip("\ufeff").splitlines(), start=1):
+        line = raw.strip()
+        if in_comment:
+            in_comment = "-->" not in line
+            continue
+        if not line:
+            continue
+        warnings.extend(line_warnings(n, line))
+        if line.startswith("<!--"):
+            in_comment = "-->" not in line
+            continue
+        yield n, line
+
+
 def parse_resume(text):
     """Parse resume markdown. Returns (blocks, warnings); blocks are (kind, data)."""
     blocks, warnings = [], []
     expect_contact = False
-    for n, raw in enumerate(text.lstrip("﻿").splitlines(), start=1):
-        line = raw.strip()
-        if not line:
-            continue
-        if EM_DASH in line:
-            warnings.append(f"line {n}: em dash found, rewrite without it")
+    for n, line in _content_lines(text, warnings):
         if expect_contact:
             expect_contact = False
             if not (line.startswith("#") or BULLET_RE.match(line) or JOB_RE.match(line)
@@ -97,6 +130,8 @@ def parse_resume(text):
             blocks.append(("body", line))
         if blocks and blocks[-1][0] == "body" and stray_asterisk(blocks[-1][1]):
             warnings.append(f"line {n}: stray * (unclosed bold or *italic*), check formatting")
+    if not any(kind == "name" for kind, _ in blocks):
+        warnings.append("no '# Name' line found")
     return blocks, warnings
 
 
@@ -124,6 +159,9 @@ def _add_text(p, text, size, bold=False, italic=False):
 def render_resume(blocks, out_path, template=RESUME_TEMPLATE):
     doc = Document(str(template))
     _clear_body(doc)
+    sec = doc.sections[-1]
+    dims = (sec.page_width, sec.left_margin, sec.right_margin)
+    tab_pos = RIGHT_TAB_POS if None in dims else (dims[0] - dims[1] - dims[2]) // 635
     for kind, data in blocks:
         if kind == "name":
             p = _add_text(doc.add_paragraph(), data, SIZE_NAME, bold=True)
@@ -149,7 +187,7 @@ def render_resume(blocks, out_path, template=RESUME_TEMPLATE):
             p = _add_text(doc.add_paragraph(), title, SIZE_BODY, bold=True)
             _add_text(p, f"\t{dates}", SIZE_BODY)
             p._element.get_or_add_pPr().append(parse_xml(
-                '<w:tabs {}><w:tab w:pos="{}" w:val="right"/></w:tabs>'.format(nsdecls("w"), RIGHT_TAB_POS)
+                '<w:tabs {}><w:tab w:pos="{}" w:val="right"/></w:tabs>'.format(nsdecls("w"), tab_pos)
             ))
         elif kind == "subheader":
             _add_text(doc.add_paragraph(), data, SIZE_BODY, bold=True, italic=True)
@@ -164,12 +202,7 @@ def render_resume(blocks, out_path, template=RESUME_TEMPLATE):
 def parse_cover(text):
     blocks, warnings = [], []
     expect_contact = False
-    for n, raw in enumerate(text.lstrip("﻿").splitlines(), start=1):
-        line = raw.strip()
-        if not line:
-            continue
-        if EM_DASH in line:
-            warnings.append(f"line {n}: em dash found, rewrite without it")
+    for n, line in _content_lines(text, warnings):
         if line.startswith("# "):
             blocks.append(("name", line[2:].strip()))
             expect_contact = True
@@ -181,6 +214,13 @@ def parse_cover(text):
         if line.startswith("#"):
             warnings.append(f"line {n}: headings are not used in cover letters, rendered as text")
             line = line.lstrip("#").strip()
+        elif HR_RE.fullmatch(line):
+            warnings.append(f"line {n}: horizontal rule ignored, cover letters don't use them")
+            continue
+        elif line.startswith("- "):
+            warnings.append(f"line {n}: bullet lists are not formatted in cover letters, rendered as text")
+        if stray_asterisk(line):
+            warnings.append(f"line {n}: stray * (unclosed bold or *italic*), check formatting")
         blocks.append(("body", line))
     return blocks, warnings
 
@@ -195,13 +235,17 @@ def render_cover(blocks, out_path, template=COVER_TEMPLATE):
     return out_path
 
 
-def estimate_pages(blocks, chars_per_line=100, lines_per_page=52):
+def estimate_pages(blocks, chars_per_line=95, bullet_chars_per_line=85, lines_per_page=45):
+    """Rough page count, calibrated against Word on the sam-rivera fixture."""
     lines = 0
     for kind, data in blocks:
         text = data if isinstance(data, str) else " ".join(x for x in data if x)
-        lines += max(1, math.ceil(len(text) / chars_per_line))
+        width = bullet_chars_per_line if kind == "bullet" else chars_per_line
+        lines += max(1, math.ceil(len(text) / width))
+        if kind != "bullet":
+            lines += 1  # template adds space after every paragraph except bullets
         if kind == "section":
-            lines += 2
+            lines += 2  # blank spacer paragraph plus heading spacing
     return lines / lines_per_page
 
 
@@ -245,11 +289,21 @@ def main(argv=None):
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     ap = argparse.ArgumentParser(description="Build a .docx resume or cover letter from markdown.")
-    ap.add_argument("kind", choices=["resume", "cover"])
-    ap.add_argument("source", type=Path)
+    ap.add_argument("kind", nargs="?", choices=["resume", "cover"])
+    ap.add_argument("source", nargs="?", type=Path)
     ap.add_argument("-o", "--output", type=Path)
     ap.add_argument("--no-pdf", action="store_true", help="skip PDF export")
+    ap.add_argument("--check", action="store_true", help="check the setup and exit")
     args = ap.parse_args(argv)
+
+    if args.check:
+        print(f"Python {sys.version.split()[0]}")
+        print("python-docx: OK")
+        print(f"LibreOffice: {find_soffice() or 'not found (optional)'}")
+        return 0
+    missing = [name for name in ("kind", "source") if getattr(args, name) is None]
+    if missing:
+        ap.error("the following arguments are required: " + ", ".join(missing))
 
     if not args.source.is_file():
         print(f"ERROR: can't find {args.source}")
@@ -274,11 +328,12 @@ def main(argv=None):
         print(f"WARNING: {w}")
     print(f"Wrote {out}")
     pdf = None if args.no_pdf else export_pdf(out)
-    if pdf:
-        print(f"Wrote {pdf} ({count_pdf_pages(pdf)} pages)")
+    pages = count_pdf_pages(pdf) if pdf else 0
+    if pages:
+        print(f"Wrote {pdf} ({pages} pages)")
     else:
-        print(f"Estimated length: {max(0.1, estimate_pages(blocks)):.1f} pages "
-              "(install LibreOffice for PDF export and an exact page count)")
+        print(f"Estimated length: about {max(0.1, estimate_pages(blocks)):.1f} pages "
+              "(estimate only, open the file to confirm)")
     return 0
 
 

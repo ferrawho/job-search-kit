@@ -1,6 +1,7 @@
 import sys
 from pathlib import Path
 
+import pytest
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 
@@ -29,6 +30,11 @@ def kinds(blocks):
     return [k for k, _ in blocks]
 
 
+def warns(text):
+    """Resume warnings minus the no-name warning, for fragment tests."""
+    return [w for w in b.parse_resume(text)[1] if "no '# Name'" not in w]
+
+
 def test_parse_resume_kinds():
     blocks, warnings = b.parse_resume(SAMPLE)
     assert kinds(blocks) == [
@@ -49,20 +55,21 @@ def test_job_line():
 
 
 def test_unsupported_markdown_warns_and_renders_as_body():
-    blocks, warnings = b.parse_resume("| a | b |\n##### deep\n> quote\n1. item\n")
+    blocks, _ = b.parse_resume("| a | b |\n##### deep\n> quote\n1. item\n")
+    warnings = warns("| a | b |\n##### deep\n> quote\n1. item\n")
     assert len(warnings) == 4
     assert all(w.startswith("line ") for w in warnings)
     assert kinds(blocks) == ["body"] * 4
 
 
 def test_em_dash_warns():
-    _, warnings = b.parse_resume("- Did a thing \u2014 well\n")
+    warnings = warns("- Did a thing \u2014 well\n")
     assert len(warnings) == 1 and "em dash" in warnings[0]
 
 
 def test_horizontal_rule_ignored_with_warning():
-    blocks, warnings = b.parse_resume("---\n")
-    assert blocks == [] and len(warnings) == 1
+    blocks, _ = b.parse_resume("---\n")
+    assert blocks == [] and len(warns("---\n")) == 1
 
 
 def render_sample(tmp_path):
@@ -95,7 +102,10 @@ def test_render_resume_formatting(tmp_path):
     p = doc.paragraphs
     assert p[0].alignment == WD_ALIGN_PARAGRAPH.CENTER and p[0].runs[0].bold
     assert p[10].style.name == "List Bullet"
-    assert 'w:pos="8784"' in p[8]._element.xml
+    sec = Document(str(b.RESUME_TEMPLATE)).sections[-1]
+    width = (sec.page_width - sec.left_margin - sec.right_margin) // 635
+    assert width == 10224
+    assert 'w:pos="{}"'.format(width) in p[8]._element.xml
     bold_runs = [r.text for r in p[4].runs if r.bold]
     assert bold_runs == ["8 years"]
     assert p[7].runs[1].italic
@@ -257,12 +267,9 @@ def test_missing_contact_line_warns():
 
 
 def test_stray_asterisks_warn():
-    _, warnings = b.parse_resume("- Built **things\n")
-    assert warnings == ["line 1: stray * (unclosed bold or *italic*), check formatting"]
-    _, warnings = b.parse_resume("Some *italic* text\n")
-    assert warnings == ["line 1: stray * (unclosed bold or *italic*), check formatting"]
-    _, warnings = b.parse_resume("- Built **many** things\n")
-    assert warnings == []
+    assert warns("- Built **things\n") == ["line 1: stray * (unclosed bold or *italic*), check formatting"]
+    assert warns("Some *italic* text\n") == ["line 1: stray * (unclosed bold or *italic*), check formatting"]
+    assert warns("- Built **many** things\n") == []
 
 
 def test_count_pdf_pages_ignores_page_label(tmp_path):
@@ -276,3 +283,83 @@ def test_cli_output_without_extension(tmp_path):
     src.write_text(COVER, encoding="utf-8")
     assert b.main(["cover", str(src), "-o", str(tmp_path / "Sam-Cover"), "--no-pdf"]) == 0
     assert (tmp_path / "Sam-Cover.docx").exists()
+
+
+# --- Fable review ---
+
+def test_markdown_leakage_warns_with_line_numbers():
+    text = ("# Sam\nCity | e\n- See [site](http://x.com)\n- Used `SQL`\n"
+            "- Very _important_ work\n+ plus bullet\n\u2022 dot bullet\nok <!-- note -->\n")
+    _, warnings = b.parse_resume(text)
+    assert [w.split(":")[0] for w in warnings] == ["line 3", "line 4", "line 5", "line 6", "line 7", "line 8"]
+    joined = " ".join(warnings)
+    for word in ("link", "backtick", "comment", "italic", "bullet"):
+        assert word in joined
+
+
+def test_snake_case_is_not_italic():
+    assert warns("- Built file_name_parser for sam_rivera\n") == []
+
+
+def test_no_name_warns():
+    _, warnings = b.parse_resume("## SKILLS\n- Excel\n")
+    assert warnings == ["no '# Name' line found"]
+
+
+def test_comment_after_name_is_skipped_not_contact():
+    blocks, warnings = b.parse_resume("# Sam\n<!-- fill this in -->\nCity | e\n")
+    assert blocks == [("name", "Sam"), ("contact", "City | e")]
+    assert len(warnings) == 1 and "line 2" in warnings[0] and "comment" in warnings[0]
+
+
+def test_multiline_comment_skipped():
+    blocks, warnings = b.parse_resume("# Sam\nCity | e\n<!--\nhidden\n-->\n- Real\n")
+    assert blocks == [("name", "Sam"), ("contact", "City | e"), ("bullet", "Real")]
+    assert len(warnings) == 1
+
+
+def test_cover_warnings():
+    text = (COVER + "<!-- tip -->\nSee [site](http://x.com) and `code`.\n"
+            "- a bullet\n---\nA *loose star.\n")
+    blocks, warnings = b.parse_cover(text)
+    assert len(warnings) == 6 and all(w.startswith("line ") for w in warnings)
+    assert all("tip" not in d and d != "---" for _, d in blocks)
+    blocks, _ = b.parse_cover("# Sam\n<!-- x -->\nCity | e\n")
+    assert blocks == [("name", "Sam"), ("contact", "City | e")]
+
+
+def test_cli_estimate_message(tmp_path, capsys):
+    src = tmp_path / "resume.md"
+    src.write_text(SAMPLE, encoding="utf-8")
+    assert b.main(["resume", str(src), "--no-pdf"]) == 0
+    out = capsys.readouterr().out
+    assert "Estimated length: about " in out and "(estimate only, open the file to confirm)" in out
+
+
+def test_cli_zero_pdf_pages_falls_back_to_estimate(tmp_path, monkeypatch, capsys):
+    src = tmp_path / "resume.md"
+    src.write_text(SAMPLE, encoding="utf-8")
+    pdf = tmp_path / "resume.pdf"
+    monkeypatch.setattr(b, "export_pdf", lambda p: pdf.write_bytes(b"not a pdf") and pdf)
+    assert b.main(["resume", str(src)]) == 0
+    out = capsys.readouterr().out
+    assert "(0 pages)" not in out
+    assert "Estimated length: about" in out
+
+
+def test_cli_check(monkeypatch, capsys):
+    monkeypatch.setattr(b, "find_soffice", lambda: None)
+    assert b.main(["--check"]) == 0
+    out = capsys.readouterr().out
+    assert "Python" in out and "python-docx" in out and "not found (optional)" in out
+    monkeypatch.setattr(b, "find_soffice", lambda: "C:/LO/soffice.exe")
+    assert b.main(["--check"]) == 0
+    assert "C:/LO/soffice.exe" in capsys.readouterr().out
+
+
+def test_cli_still_requires_args(capsys):
+    for argv in ([], ["resume"]):
+        with pytest.raises(SystemExit) as e:
+            b.main(argv)
+        assert e.value.code == 2
+        assert "required" in capsys.readouterr().err
