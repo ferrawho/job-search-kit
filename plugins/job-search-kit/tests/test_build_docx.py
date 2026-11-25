@@ -13,7 +13,7 @@ Operations analyst with **8 years** of experience.
 
 ## EXPERIENCE
 ### Acme Corp | Logistics, 200 employees
-**Operations Analyst** | Jan 2020 – Present
+**Operations Analyst** | Jan 2020 \u2013 Present
 #### Reporting:
 - Cut weekly report time by 50%
 
@@ -53,7 +53,7 @@ def test_unsupported_markdown_warns_and_renders_as_body():
 
 
 def test_em_dash_warns():
-    _, warnings = b.parse_resume("- Did a thing — well\n")
+    _, warnings = b.parse_resume("- Did a thing \u2014 well\n")
     assert len(warnings) == 1 and "em dash" in warnings[0]
 
 

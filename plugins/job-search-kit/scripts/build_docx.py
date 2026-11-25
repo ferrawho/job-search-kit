@@ -7,7 +7,7 @@ Usage:
 """
 import re
 
-EM_DASH = "—"
+EM_DASH = "\u2014"
 
 JOB_RE = re.compile(r"^\*\*(.+?)\*\*\s*\|\s*(.+)$")
 BULLET_RE = re.compile(r"^[-*]\s+(.+)$")
