@@ -1,6 +1,6 @@
 {
   "name": "job-search-kit",
-  "owner": { "name": "job-search-kit" },
+  "owner": { "name": "Justin Ferraccioli", "url": "https://github.com/ferrawho" },
   "metadata": {
     "description": "Claude Code plugin for a truthful job search: profile intake, JD scoring, tailored resumes, interview prep, and offer review."
   },
@@ -8,7 +8,7 @@
     {
       "name": "job-search-kit",
       "source": "./plugins/job-search-kit",
-      "author": { "name": "ferrawho" },
+      "author": { "name": "Justin Ferraccioli", "url": "https://github.com/ferrawho" },
       "description": "Intake, JD scoring, tailored resumes and cover letters, interview prep, take-homes, offer review, and pipeline tracking for a job search."
     }
   ]

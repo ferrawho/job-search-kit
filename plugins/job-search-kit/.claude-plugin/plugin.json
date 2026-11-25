@@ -1,6 +1,6 @@
 {
   "name": "job-search-kit",
   "description": "Run a full job search with Claude Code: build your profile, score job descriptions, tailor resumes and cover letters, prep for interviews, and review offers.",
-  "author": { "name": "ferrawho" },
-  "license": "MIT"
+  "author": { "name": "Justin Ferraccioli", "url": "https://github.com/ferrawho" },
+  "license": "PolyForm-Noncommercial-1.0.0"
 }

@@ -1,5 +1,7 @@
 # job-search-kit
 
+Created by [Justin Ferraccioli](https://github.com/ferrawho).
+
 A Claude Code plugin that runs your job search with you. It interviews you to build a truthful profile of your work, scores job descriptions against it, writes tailored resumes and cover letters as formatted Word files, preps you for interviews, helps with take-home assignments, and reviews offers.
 
 It never invents experience. Every claim in a resume or answer has to trace back to your profile. When a job asks for something you don't have, it tells you it's a gap instead of writing around it.
@@ -141,4 +143,6 @@ The script warns about anything it can't format. You don't need to learn this; t
 
 ## License
 
-MIT
+Copyright (c) 2026 Justin Ferraccioli. Licensed under the [PolyForm Noncommercial License 1.0.0](LICENSE).
+
+Free to use and adapt for your own job search and other non-commercial purposes. Selling it, bundling it into a paid product or service, or other commercial use requires written permission. Contact me through [GitHub](https://github.com/ferrawho).
