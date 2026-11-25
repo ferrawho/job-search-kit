@@ -1,6 +1,5 @@
 {
   "name": "job-search-kit",
-  "version": "0.1.0",
   "description": "Run a full job search with Claude Code: build your profile, score job descriptions, tailor resumes and cover letters, prep for interviews, and review offers.",
   "author": { "name": "ferrawho" },
   "license": "MIT"

@@ -106,6 +106,10 @@ Everything about you lives in your own workspace folder (`profile/` and `applica
 
 ## Updating
 
+Easiest: turn on auto-update once. In Claude Code, type `/plugin`, open the **Marketplaces** tab, select `job-search-kit`, and turn on auto-update. New versions then arrive on their own.
+
+Or update by hand whenever you like:
+
 ```
 /plugin marketplace update job-search-kit
 ```
@@ -133,7 +137,7 @@ The script warns about anything it can't format. You don't need to learn this; t
 
 ## For maintainers
 
-Bump `version` in `plugins/job-search-kit/.claude-plugin/plugin.json` on every release. Installed users only receive an update when the version changes.
+`plugin.json` has no `version` on purpose, so Claude Code tracks the latest commit on `main`: every push is a release. Don't push half-finished work to `main`. If you ever add a `version`, you must bump it on every release, or users stay on the old copy.
 
 ## License
 
