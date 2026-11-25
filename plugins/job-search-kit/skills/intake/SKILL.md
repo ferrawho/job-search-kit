@@ -15,6 +15,7 @@ Interview the user to build a complete, truthful profile. Everything later (scor
 - If `profile/` doesn't exist, tell them to run `/job-search-kit:setup` and stop.
 - Read `profile/intake-progress.md`. If some topics are checked, say what's done and continue from the first unchecked topic. The user can also name a topic to redo.
 - Ask if they have an existing resume, LinkedIn PDF export, performance review, or portfolio. If so, read it first. PDFs can be read directly. For a .docx, extract the text with `python` (or `python3`, whichever worked in setup): `python -c "import docx,sys; print(chr(10).join(p.text for p in docx.Document(sys.argv[1]).paragraphs))" "<file>.docx"`.
+- Before prefilling, ask once how recent the document is and what has changed since (new job, title, or big result). Old documents often list a past job as "present".
 - Show the user what you would prefill, topic by topic, and save it only after they confirm or correct it. Then only ask questions that fill gaps or dig for specifics.
 
 ## How to interview
