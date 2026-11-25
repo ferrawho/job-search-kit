@@ -22,10 +22,12 @@ Research the company if a web tool is available: product, customers, recent news
 5. **Questions to ask them:** 5 to 8, different per interviewer. Real questions whose answers help decide whether to take the job.
 6. **Logistics checklist:** links, time zone, what to have open, salary answer if asked (from the profile floor and research).
 
-Same writing rules as `CLAUDE.md`: never invent experience.
+Same writing rules as `CLAUDE.md`: never invent experience. That includes the user's motives, plans, and feelings: if an answer needs something the profile doesn't say (why they're leaving, what they want next), ask the user instead of drafting it.
+
+Then update `applications/<folder>/notes.md`: `Status: Screen` for a recruiter screen, otherwise `Status: Interviewing` (use only the status names from the tracker skill; put the stage and date in `Next:`), today's date, and a log line.
 
 ## Mock interview mode
 If the user asks for a mock: ask one question at a time and wait for the answer. After each, give short feedback: what landed, what was missing (numbers, "I" vs "we", length), and a tighter version. At the end, list the three weakest answers to practice.
 
 ## Debrief mode
-After a real interview, ask what was asked, what went well, what was awkward, and any signals. Log it in `notes.md`, update `Status:`, add new or improved stories to `profile/stories.md`, and draft a short thank-you note if wanted.
+After a real interview, ask what was asked, what went well, what was awkward, and any signals. Log it in `notes.md`, update `Status:` (tracker status names only), add new or improved stories to `profile/stories.md`, and draft a short thank-you note if wanted.
