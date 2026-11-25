@@ -1,6 +1,9 @@
 import sys
 from pathlib import Path
 
+from docx import Document
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 
 import build_docx as b  # noqa: E402
@@ -60,3 +63,39 @@ def test_em_dash_warns():
 def test_horizontal_rule_ignored_with_warning():
     blocks, warnings = b.parse_resume("---\n")
     assert blocks == [] and len(warnings) == 1
+
+
+def render_sample(tmp_path):
+    blocks, _ = b.parse_resume(SAMPLE)
+    out = tmp_path / "resume.docx"
+    b.render_resume(blocks, out)
+    return Document(str(out))
+
+
+def test_render_resume_paragraph_sequence(tmp_path):
+    doc = render_sample(tmp_path)
+    texts = [p.text for p in doc.paragraphs]
+    assert texts == [
+        "SAM RIVERA",
+        "Springfield, IL | sam@example.com | linkedin.com/in/example",
+        "", "SUMMARY",
+        "Operations analyst with 8 years of experience.",
+        "", "EXPERIENCE",
+        "Acme Corp (Logistics, 200 employees)",
+        "Operations Analyst\tJan 2020 \u2013 Present",
+        "Reporting:",
+        "Cut weekly report time by 50%",
+        "", "EDUCATION",
+        "BSc Economics, State University, 2015",
+    ]
+
+
+def test_render_resume_formatting(tmp_path):
+    doc = render_sample(tmp_path)
+    p = doc.paragraphs
+    assert p[0].alignment == WD_ALIGN_PARAGRAPH.CENTER and p[0].runs[0].bold
+    assert p[10].style.name == "List Bullet"
+    assert 'w:pos="8784"' in p[8]._element.xml
+    bold_runs = [r.text for r in p[4].runs if r.bold]
+    assert bold_runs == ["8 years"]
+    assert p[7].runs[1].italic
