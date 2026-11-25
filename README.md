@@ -43,9 +43,7 @@ Close the terminal and open a new one. Type `claude` and press Enter, then follo
 
 **5. Install Git.** It's needed to download the plugin. Windows: [git-scm.com/download/win](https://git-scm.com/download/win), default options. Mac: type `git --version` in the terminal and accept the prompt to install the developer tools.
 
-**6. Private repo only: sign in to GitHub.** If this repo was shared with you privately, install the GitHub CLI from [cli.github.com](https://cli.github.com/), then run `gh auth login` and choose GitHub.com, HTTPS, and "Login with a web browser". Also run `gh auth setup-git` so downloads use that login.
-
-**7. Make a folder for your job search**, for example `Documents\job-search`. Open a terminal in it:
+**6. Make a folder for your job search**, for example `Documents\job-search`. Open a terminal in it:
 - **Windows:** open the folder in File Explorer, click the address bar, type `powershell`, press Enter.
 - **Mac:** right-click the folder in Finder, then Services, then New Terminal at Folder.
 
