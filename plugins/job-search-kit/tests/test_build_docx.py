@@ -99,3 +99,33 @@ def test_render_resume_formatting(tmp_path):
     bold_runs = [r.text for r in p[4].runs if r.bold]
     assert bold_runs == ["8 years"]
     assert p[7].runs[1].italic
+
+
+COVER = """# Sam Rivera
+Springfield, IL | sam@example.com
+
+November 25, 2026
+
+Dear Hiring Team,
+
+I run **weekly ops reporting** for a 200-person logistics team.
+
+Best regards,
+Sam Rivera
+"""
+
+
+def test_parse_cover():
+    blocks, warnings = b.parse_cover(COVER)
+    assert kinds(blocks) == ["name", "contact", "body", "body", "body", "body", "body"]
+    assert warnings == []
+
+
+def test_render_cover(tmp_path):
+    blocks, _ = b.parse_cover(COVER)
+    out = tmp_path / "cover.docx"
+    b.render_cover(blocks, out)
+    doc = Document(str(out))
+    assert [p.text for p in doc.paragraphs][0:2] == ["Sam Rivera", "Springfield, IL | sam@example.com"]
+    assert doc.paragraphs[0].runs[0].bold
+    assert [r.text for r in doc.paragraphs[4].runs if r.bold] == ["weekly ops reporting"]

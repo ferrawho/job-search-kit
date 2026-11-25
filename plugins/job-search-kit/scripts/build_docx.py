@@ -25,6 +25,10 @@ SIZE_COMPANY = 139700
 SIZE_BODY = 127000
 RIGHT_TAB_POS = 8784
 
+COVER_NAME = 177800
+COVER_CONTACT = 127000
+COVER_BODY = 139700
+
 EM_DASH = "\u2014"
 
 JOB_RE = re.compile(r"^\*\*(.+?)\*\*\s*\|\s*(.+)$")
@@ -130,5 +134,39 @@ def render_resume(blocks, out_path, template=RESUME_TEMPLATE):
             _add_text(doc.add_paragraph(style="List Bullet"), data, SIZE_BODY)
         else:
             _add_text(doc.add_paragraph(), data, SIZE_BODY)
+    doc.save(str(out_path))
+    return out_path
+
+
+def parse_cover(text):
+    blocks, warnings = [], []
+    expect_contact = False
+    for n, raw in enumerate(text.splitlines(), start=1):
+        line = raw.strip()
+        if not line:
+            continue
+        if EM_DASH in line:
+            warnings.append(f"line {n}: em dash found, rewrite without it")
+        if line.startswith("# "):
+            blocks.append(("name", line[2:].strip()))
+            expect_contact = True
+            continue
+        if expect_contact:
+            blocks.append(("contact", line))
+            expect_contact = False
+            continue
+        if line.startswith("#"):
+            warnings.append(f"line {n}: headings are not used in cover letters, rendered as text")
+            line = line.lstrip("#").strip()
+        blocks.append(("body", line))
+    return blocks, warnings
+
+
+def render_cover(blocks, out_path, template=COVER_TEMPLATE):
+    doc = Document(str(template))
+    _clear_body(doc)
+    sizes = {"name": COVER_NAME, "contact": COVER_CONTACT}
+    for kind, data in blocks:
+        _add_text(doc.add_paragraph(), data, sizes.get(kind, COVER_BODY), bold=(kind == "name"))
     doc.save(str(out_path))
     return out_path
