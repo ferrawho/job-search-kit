@@ -16,7 +16,11 @@
 ## Day-to-day
 <!-- A typical week, recurring responsibilities, who you spend time with. -->
 
+## Previous roles
+<!-- Title, company, dates, top accomplishments with numbers. -->
+
 ## Tools and skills
+<!-- Also certifications and education. -->
 
 ## Known for
 <!-- What colleagues come to you for, feedback you've received. -->

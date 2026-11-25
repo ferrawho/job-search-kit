@@ -35,3 +35,8 @@ This folder is a job search workspace run with the job-search-kit plugin.
 - `#### Subheader`
 - `- bullet` (inline `**bold**` works)
 - Anything else is a plain paragraph.
+
+## Cover letter markdown format
+- `# Name`, then the contact line on the next line
+- Every other non-empty line is one paragraph (date, greeting, body paragraphs, sign-off)
+- Inline `**bold**` works. No other headings.

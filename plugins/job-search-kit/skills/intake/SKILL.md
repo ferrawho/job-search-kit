@@ -22,12 +22,12 @@ Interview the user to build a complete, truthful profile. Everything later (scor
 
 ## Topics
 1. **Basics and goals:** name, location, contact line, links, target roles and level, remote preference, salary floor, timeline, dealbreakers. Write `profile/profile.md` Basics.
-2. **Current role:** title, company, what the company does, size, who they report to and work with.
-3. **Day-to-day:** typical week, recurring responsibilities, tools touched daily.
+2. **Current role:** title, company, what the company does, size, who they report to and work with. Write `profile/profile.md` Current role.
+3. **Day-to-day:** typical week, recurring responsibilities, tools touched daily. Write `profile/profile.md` Day-to-day.
 4. **Standout projects (aim for 3 to 6):** for each, ask: the problem, why it mattered, what they did, who else was involved, tools, the result in numbers, what they'd do differently. Write one file per project in `profile/projects/<short-slug>.md` with those headings.
-5. **Previous roles:** title, company, dates, top 2 to 4 accomplishments each (same digging, lighter touch).
-6. **Skills, tools, certifications, education.**
-7. **Known for:** what colleagues come to them for, feedback from reviews, awards.
+5. **Previous roles:** title, company, dates, top 2 to 4 accomplishments each (same digging, lighter touch). Write `profile/profile.md` Previous roles.
+6. **Skills, tools, certifications, education.** Write `profile/profile.md` Tools and skills (certifications and education go there too).
+7. **Known for:** what colleagues come to them for, feedback from reviews, awards. Write `profile/profile.md` Known for, and fill in "What I want next" if it came up.
 8. **Story bank:** turn projects and accomplishments into STAR stories in `profile/stories.md` using `PLUGIN/references/star-guide.md` (plugin root is two levels above this skill's base directory). Tag competencies. Point out which common competencies have no story yet and ask for one example for each.
 9. **Master resume:** write `profile/master-resume.md` in the resume markdown format from the workspace `CLAUDE.md`. Include **everything**, uncut. Follow every writing rule in `CLAUDE.md`.
 
