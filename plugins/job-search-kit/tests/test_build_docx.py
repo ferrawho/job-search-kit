@@ -129,3 +129,32 @@ def test_render_cover(tmp_path):
     assert [p.text for p in doc.paragraphs][0:2] == ["Sam Rivera", "Springfield, IL | sam@example.com"]
     assert doc.paragraphs[0].runs[0].bold
     assert [r.text for r in doc.paragraphs[4].runs if r.bold] == ["weekly ops reporting"]
+
+
+def test_estimate_pages_grows_with_content():
+    small, _ = b.parse_resume(SAMPLE)
+    big, _ = b.parse_resume(SAMPLE + "\n".join(["- " + "x" * 150] * 80))
+    assert 0 < b.estimate_pages(small) < 1 < b.estimate_pages(big)
+
+
+def test_count_pdf_pages(tmp_path):
+    pdf = tmp_path / "x.pdf"
+    pdf.write_bytes(b"<< /Type /Pages /Kids [] >> << /Type /Page >> << /Type/Page >>")
+    assert b.count_pdf_pages(pdf) == 2
+
+
+def test_cli_builds_resume(tmp_path, capsys):
+    src = tmp_path / "resume.md"
+    src.write_text(SAMPLE + "- bad \u2014 dash\n", encoding="utf-8")
+    assert b.main(["resume", str(src), "--no-pdf"]) == 0
+    assert (tmp_path / "resume.docx").exists()
+    out = capsys.readouterr().out
+    assert "WARNING: line" in out and "Estimated length" in out
+
+
+def test_cli_output_flag(tmp_path):
+    src = tmp_path / "cover.md"
+    src.write_text(COVER, encoding="utf-8")
+    dst = tmp_path / "Sam-Rivera-Cover.docx"
+    assert b.main(["cover", str(src), "-o", str(dst), "--no-pdf"]) == 0
+    assert dst.exists()

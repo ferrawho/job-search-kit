@@ -5,7 +5,12 @@ Usage:
     python build_docx.py resume path/to/resume.md [-o out.docx] [--no-pdf]
     python build_docx.py cover  path/to/cover.md  [-o out.docx] [--no-pdf]
 """
+import argparse
+import math
 import re
+import shutil
+import subprocess
+import sys
 from pathlib import Path
 
 from docx import Document
@@ -36,6 +41,7 @@ BULLET_RE = re.compile(r"^[-*]\s+(.+)$")
 HR_RE = re.compile(r"[-_*]{3,}")
 UNSUPPORTED_RE = re.compile(r"^(#{5,}|#\S|\||>|\d+\.\s)")
 INLINE_BOLD_RE = re.compile(r"\*\*(.+?)\*\*")
+PDF_PAGE_RE = re.compile(rb"/Type\s*/Page(?!s)")
 
 
 def parse_resume(text):
@@ -170,3 +176,67 @@ def render_cover(blocks, out_path, template=COVER_TEMPLATE):
         _add_text(doc.add_paragraph(), data, sizes.get(kind, COVER_BODY), bold=(kind == "name"))
     doc.save(str(out_path))
     return out_path
+
+
+def estimate_pages(blocks, chars_per_line=100, lines_per_page=52):
+    lines = 0
+    for kind, data in blocks:
+        text = data if isinstance(data, str) else " ".join(x for x in data if x)
+        lines += max(1, math.ceil(len(text) / chars_per_line))
+        if kind == "section":
+            lines += 2
+    return lines / lines_per_page
+
+
+def export_pdf(docx_path):
+    """Convert with LibreOffice if installed. Returns the PDF path or None."""
+    soffice = shutil.which("soffice") or shutil.which("libreoffice")
+    if not soffice:
+        return None
+    docx_path = Path(docx_path)
+    try:
+        subprocess.run(
+            [soffice, "--headless", "--convert-to", "pdf", "--outdir", str(docx_path.parent), str(docx_path)],
+            check=True, capture_output=True, timeout=120,
+        )
+    except (subprocess.SubprocessError, OSError):
+        return None
+    pdf = docx_path.with_suffix(".pdf")
+    return pdf if pdf.exists() else None
+
+
+def count_pdf_pages(pdf_path):
+    return len(PDF_PAGE_RE.findall(Path(pdf_path).read_bytes()))
+
+
+def main(argv=None):
+    ap = argparse.ArgumentParser(description="Build a .docx resume or cover letter from markdown.")
+    ap.add_argument("kind", choices=["resume", "cover"])
+    ap.add_argument("source", type=Path)
+    ap.add_argument("-o", "--output", type=Path)
+    ap.add_argument("--no-pdf", action="store_true", help="skip PDF export")
+    args = ap.parse_args(argv)
+
+    text = args.source.read_text(encoding="utf-8")
+    out = args.output or args.source.with_suffix(".docx")
+    if args.kind == "resume":
+        blocks, warnings = parse_resume(text)
+        render_resume(blocks, out)
+    else:
+        blocks, warnings = parse_cover(text)
+        render_cover(blocks, out)
+
+    for w in warnings:
+        print(f"WARNING: {w}")
+    print(f"Wrote {out}")
+    pdf = None if args.no_pdf else export_pdf(out)
+    if pdf:
+        print(f"Wrote {pdf} ({count_pdf_pages(pdf)} pages)")
+    else:
+        print(f"Estimated length: {estimate_pages(blocks):.1f} pages "
+              "(install LibreOffice for PDF export and an exact page count)")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
