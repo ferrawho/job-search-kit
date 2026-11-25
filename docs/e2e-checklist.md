@@ -50,6 +50,7 @@ Why these flags: `acceptEdits` lets the session write files only inside the work
 - **setup:** compound shell commands (`cd ...; ls; find ...`) were denied by the narrow allowlist, so the session read each template and wrote identical copies instead of using `cp`. Result is correct.
 - **interview-prep:** set `Status: Interviewing (hiring manager)` in `notes.md`. The skill only says to update status in debrief mode, and the value is not one of the tracker's canonical statuses. The tracker handled it, but sorting relies on the canonical names.
 - **interview-prep:** the "Why are you leaving Northwind?" outline includes a sentence not in the profile ("Northwind's next step for me isn't a people-management role"), flagged in the file as "Check that this is true before saying the second sentence." Hedged, but it is a drafted claim.
+- **interview-prep:** the two problems above (non-canonical status, drafted motive) were fixed in commit f23ac5a.
 - **interview-prep:** web search was denied by the permission setup, so company research was skipped and marked as a to-do in the file.
 
 ## Timings (headless runs)

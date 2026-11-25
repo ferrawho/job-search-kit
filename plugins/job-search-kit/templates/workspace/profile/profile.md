@@ -5,6 +5,7 @@
 - Location / remote preference:
 - Contact line for resume:
 - Target roles and level:
+- Current compensation:
 - Salary floor:
 - Timeline / urgency:
 - Dealbreakers:

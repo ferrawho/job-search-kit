@@ -20,7 +20,7 @@ It never invents experience. Every claim in a resume or answer has to trace back
 ## Requirements
 
 - [Claude Code](https://claude.com/claude-code)
-- Python 3.10 or newer, with python-docx: `python -m pip install python-docx`
+- Python 3.9 or newer, with python-docx: `python -m pip install python-docx`
 - Optional: [LibreOffice](https://www.libreoffice.org/) for PDF export and exact page counts
 
 ## Install
@@ -45,6 +45,8 @@ On older versions, use two steps:
 3. Type `/job-search-kit:setup`.
 4. Type `/job-search-kit:intake`. If you have an existing resume or a LinkedIn PDF export, drop it in the folder first. Intake reads it and only asks about what's missing.
 5. Paste a job description and type `/job-search-kit:score-jd`.
+
+The first time, Claude asks permission to read the plugin's files and run python. Approving is safe: the plugin only reads its own files and runs python to build and read Word files in your workspace.
 
 Intake saves after every topic, so you can stop and pick it up later.
 
@@ -78,6 +80,10 @@ City, Region | email | phone | linkedin.com/in/handle
 ```
 
 The script warns about anything it can't format. You don't need to learn this; the tailor skill writes it for you.
+
+## For maintainers
+
+Bump `version` in `plugins/job-search-kit/.claude-plugin/plugin.json` on every release. Installed users only receive an update when the version changes.
 
 ## License
 

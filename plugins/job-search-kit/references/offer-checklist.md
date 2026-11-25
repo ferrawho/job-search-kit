@@ -26,6 +26,6 @@ Base + expected bonus + equity value (state the assumptions) + retirement match 
 
 ## 4. Negotiation
 - Ask for everything in one round. Lead with excitement, then the asks.
-- Anchor with data (market ranges, competing offers) where available.
+- Anchor with data only when it has a source: market ranges with a cited source, and a competing offer only if you really have one. Never imply an offer you don't have.
 - Priorities: what matters most, what's a nice-to-have, what's a walk-away.
 - Get final terms in writing before signing.
