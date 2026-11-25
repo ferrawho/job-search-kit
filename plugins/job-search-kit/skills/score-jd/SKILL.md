@@ -5,6 +5,10 @@ description: Use when the user shares a job description (pasted text, file, or U
 
 # Score a Job Description
 
+## Ground rules
+- Read the workspace `CLAUDE.md` first if you haven't read it this session, and follow its writing rules.
+- Every fact, number, title, date, tool, motive and company fact must come from the user, `profile/`, `jd.md`, or research done this session with a cited source. If it isn't there, ask or leave it out.
+
 ## Steps
 1. **Check the profile.** If `profile/master-resume.md` is missing or still has placeholder text, tell them to run `/job-search-kit:intake` first and stop.
 2. **Get the JD.** Pasted text, a file path, or a URL (fetch it if a web tool is available; otherwise ask them to paste it).

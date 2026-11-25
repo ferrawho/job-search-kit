@@ -77,10 +77,10 @@ On older versions, use two steps:
 1. Make an empty folder for your job search and open a terminal there.
 2. Run `claude`.
 3. Type `/job-search-kit:setup`.
-4. Type `/job-search-kit:intake`. If you have an existing resume or a LinkedIn PDF export, drop it in the folder first. Intake reads it and only asks about what's missing.
+4. Type `/job-search-kit:intake`. If you have an existing resume, a LinkedIn PDF export or a performance review, put it in the `imports/` folder first. Intake reads it and only asks about what's missing.
 5. Paste a job description and type `/job-search-kit:score-jd`.
 
-The first time, Claude asks permission to read the plugin's files and run python. Approving is safe: the plugin only reads its own files and runs python to build and read Word files in your workspace.
+The first time, Claude asks permission to read the plugin's files and to run python. The kit uses python to build Word (and, with LibreOffice, PDF) files from the markdown in your workspace (the script makes no network connections) and to read a .docx resume you point it to. Setup may also offer to install python-docx or run git, and asks first. Score-jd may fetch a job posting URL, and interview prep and offer review may search the web about the company. Approve prompts that match this. You never need to choose "always allow".
 
 Intake saves after every topic, so you can stop and pick it up later.
 
@@ -104,11 +104,15 @@ You don't have to remember exact command names. Asking in plain words ("score th
 
 ## Your data
 
-Everything about you lives in your own workspace folder (`profile/` and `applications/`), never inside the plugin. If you put your workspace in git, keep that repo private: it holds your contact details and, later, offer letters. Offer documents are git-ignored by default.
+The plugin stores nothing about you. Your profile, applications and offer documents are files in your own workspace folder, and the plugin has no telemetry, servers or background processes. Two things to know: (1) Claude Code is a cloud service, so whatever Claude reads (your resume, compensation, contracts) is sent to Anthropic to be processed, under your Claude plan's privacy settings. (2) Claude Code keeps its own conversation history on your computer outside this folder, in the `.claude` folder in your home directory.
+
+If your workspace is inside a folder synced by OneDrive, iCloud or Dropbox (Documents often is), it's synced to that service too. If you put the workspace in git, keep the repo private and never push it to a public host: it holds your contact details, compensation, salary floor, interview notes and interviewer names. Offer letters and contracts in `applications/*/offer/`, employer take-home briefs, and documents you put in `imports/` are left out of git by default.
+
+If you report a problem, don't paste your profile, resume or offer details into a GitHub issue.
 
 ## Updating
 
-Easiest: turn on auto-update once. In Claude Code, type `/plugin`, open the **Marketplaces** tab, select `job-search-kit`, and turn on auto-update. New versions then arrive on their own.
+Easiest: turn on auto-update once. In Claude Code, type `/plugin`, open the **Marketplaces** tab, select `job-search-kit`, and turn on auto-update. New versions then arrive on their own. Auto-update means you trust future changes from the maintainer. If you'd rather review changes first, leave it off and update by hand.
 
 Or update by hand whenever you like:
 

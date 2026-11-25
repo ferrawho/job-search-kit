@@ -1,3 +1,12 @@
-# Offer letters and contracts stay private
+# Offer letters and contracts stay out of git
 applications/*/offer/
+# Take-home briefs can be confidential to the employer
+applications/*/take-home/brief.*
+# Original resumes, LinkedIn exports and reviews you bring in
+imports/
+# Office lock files and system files
 ~$*
+.~lock.*#
+.DS_Store
+# Local Claude Code settings
+.claude/settings.local.json

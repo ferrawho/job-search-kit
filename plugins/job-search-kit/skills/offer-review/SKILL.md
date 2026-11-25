@@ -16,7 +16,7 @@ Start by saying once: this is a structured review, not legal advice. For termina
 - If the application folder or its `jd.md` is missing, ask for the job description and create the folder the way score-jd does: `applications/<company>-<role>/` in lowercase-hyphenated form, with the JD saved verbatim to `jd.md` and the source URL and date at the top. If `notes.md` is missing, create it in score-jd's format with `Score: not scored` and the status this skill sets.
 
 ## Steps
-1. **Collect** the offer letter, contract, benefits summary, equity docs, and any recruiter emails with promises. Save them to `applications/<folder>/offer/` (git-ignored).
+1. **Collect** the offer letter, contract, benefits summary, equity docs, and any recruiter emails with promises. Save them to `applications/<folder>/offer/`. If the folder is a git repo, first run `git check-ignore -q applications/<folder>/offer/`. If it isn't ignored, offer to add `applications/*/offer/` to `.gitignore` and do it with a yes before saving anything there. Only describe the folder as "(git-ignored)" when that's true.
 2. **Read** `PLUGIN/references/offer-checklist.md` (plugin root two levels above this skill's base directory) and go through every item.
 3. **Write `offer/offer-review.md`:**
    - **Promised vs. written:** table of every term in the offer letter or emails, with where (or whether) the contract covers it. Flag anything missing, especially when there's an entire agreement clause.

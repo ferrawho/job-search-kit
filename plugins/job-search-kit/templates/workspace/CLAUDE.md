@@ -16,6 +16,12 @@ This folder is a job search workspace run with the job-search-kit plugin.
 - **Specifics over adjectives.** Every resume bullet carries a number or a concrete outcome when the profile supports one. Never make up a number. Numbers marked "approx" in the profile may be written as "~" or "roughly".
 - **Sound like a person.** Cover letters read like the candidate talking, not a template.
 
+## Privacy
+- Web searches and fetches contain only public things: the company, the role title, level, location, and an interviewer's name with their company. Never put my name, contact details, my current employer's internal numbers, compensation, salary floor, or any text from an offer or contract into a search query, URL or web form.
+- Never upload or send files from this folder to any outside service, connector or email unless I ask for that specific file to be sent.
+- Files in `applications/*/offer/` are never quoted outside that folder.
+- If a number or detail is confidential to an employer, ask whether it can appear on a resume. If not, mark it "(confidential, don't publish)" in the profile and keep it out of resumes, cover letters and interview answers.
+
 ## Personal style notes
 <!-- Add your own rules here. Examples: "Spell it e-commerce", "Don't mention the 2019 contract role". -->
 
@@ -26,6 +32,8 @@ This folder is a job search workspace run with the job-search-kit plugin.
 - `profile/stories.md`: STAR story bank for interviews
 - `profile/intake-progress.md`: which intake topics are done
 - `applications/<company>-<role>/`: one folder per application (jd, score, resume, cover, prep, notes)
+- `tracker.md`: pipeline summary written by the tracker skill
+- `imports/`: existing resumes, LinkedIn exports and reviews you bring in (git-ignored)
 
 ## Resume markdown format (used by the .docx builder)
 - `# Name`, then the contact line on the next line
