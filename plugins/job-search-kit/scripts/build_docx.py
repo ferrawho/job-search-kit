@@ -7,6 +7,7 @@ Usage:
 """
 import argparse
 import math
+import os
 import re
 import shutil
 import subprocess
@@ -41,24 +42,36 @@ BULLET_RE = re.compile(r"^[-*]\s+(.+)$")
 HR_RE = re.compile(r"[-_*]{3,}")
 UNSUPPORTED_RE = re.compile(r"^(#{5,}|#\S|\||>|\d+\.\s)")
 INLINE_BOLD_RE = re.compile(r"\*\*(.+?)\*\*")
-PDF_PAGE_RE = re.compile(rb"/Type\s*/Page(?!s)")
+PDF_PAGE_RE = re.compile(rb"/Type\s*/Page(?![A-Za-z])")
+SOFFICE_CANDIDATES = [
+    "C:/Program Files/LibreOffice/program/soffice.exe",
+    "C:/Program Files (x86)/LibreOffice/program/soffice.exe",
+    "/Applications/LibreOffice.app/Contents/MacOS/soffice",
+]
+
+
+def stray_asterisk(text):
+    """True if * remains after removing **bold** pairs."""
+    return "*" in INLINE_BOLD_RE.sub("", text)
 
 
 def parse_resume(text):
     """Parse resume markdown. Returns (blocks, warnings); blocks are (kind, data)."""
     blocks, warnings = [], []
     expect_contact = False
-    for n, raw in enumerate(text.splitlines(), start=1):
+    for n, raw in enumerate(text.lstrip("﻿").splitlines(), start=1):
         line = raw.strip()
         if not line:
             continue
         if EM_DASH in line:
             warnings.append(f"line {n}: em dash found, rewrite without it")
-        if expect_contact and not line.startswith("#"):
-            blocks.append(("contact", line))
+        if expect_contact:
             expect_contact = False
-            continue
-        expect_contact = False
+            if not (line.startswith("#") or BULLET_RE.match(line) or JOB_RE.match(line)
+                    or HR_RE.fullmatch(line)):
+                blocks.append(("contact", line))
+                continue
+            warnings.append(f"line {n}: no contact line after name")
         if line.startswith("# "):
             blocks.append(("name", line[2:].strip()))
             expect_contact = True
@@ -73,6 +86,8 @@ def parse_resume(text):
             warnings.append(f"line {n}: horizontal rule ignored")
         elif m := BULLET_RE.match(line):
             blocks.append(("bullet", m.group(1).strip()))
+            if stray_asterisk(m.group(1)):
+                warnings.append(f"line {n}: stray * (unclosed bold or *italic*), check formatting")
         elif m := JOB_RE.match(line):
             blocks.append(("job", (m.group(1).strip(), m.group(2).strip())))
         elif UNSUPPORTED_RE.match(line):
@@ -80,6 +95,8 @@ def parse_resume(text):
             blocks.append(("body", line.lstrip("#>|").strip()))
         else:
             blocks.append(("body", line))
+        if blocks and blocks[-1][0] == "body" and stray_asterisk(blocks[-1][1]):
+            warnings.append(f"line {n}: stray * (unclosed bold or *italic*), check formatting")
     return blocks, warnings
 
 
@@ -147,7 +164,7 @@ def render_resume(blocks, out_path, template=RESUME_TEMPLATE):
 def parse_cover(text):
     blocks, warnings = [], []
     expect_contact = False
-    for n, raw in enumerate(text.splitlines(), start=1):
+    for n, raw in enumerate(text.lstrip("﻿").splitlines(), start=1):
         line = raw.strip()
         if not line:
             continue
@@ -188,12 +205,28 @@ def estimate_pages(blocks, chars_per_line=100, lines_per_page=52):
     return lines / lines_per_page
 
 
+def find_soffice():
+    """Locate LibreOffice: SOFFICE env var, PATH, then common install paths."""
+    env = os.environ.get("SOFFICE")
+    if env and Path(env).is_file():
+        return env
+    found = shutil.which("soffice") or shutil.which("libreoffice")
+    if found:
+        return found
+    for candidate in SOFFICE_CANDIDATES:
+        if Path(candidate).is_file():
+            return candidate
+    return None
+
+
 def export_pdf(docx_path):
     """Convert with LibreOffice if installed. Returns the PDF path or None."""
-    soffice = shutil.which("soffice") or shutil.which("libreoffice")
+    soffice = find_soffice()
     if not soffice:
         return None
     docx_path = Path(docx_path)
+    pdf = docx_path.with_suffix(".pdf")
+    pdf.unlink(missing_ok=True)
     try:
         subprocess.run(
             [soffice, "--headless", "--convert-to", "pdf", "--outdir", str(docx_path.parent), str(docx_path)],
@@ -201,7 +234,6 @@ def export_pdf(docx_path):
         )
     except (subprocess.SubprocessError, OSError):
         return None
-    pdf = docx_path.with_suffix(".pdf")
     return pdf if pdf.exists() else None
 
 
@@ -210,6 +242,8 @@ def count_pdf_pages(pdf_path):
 
 
 def main(argv=None):
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     ap = argparse.ArgumentParser(description="Build a .docx resume or cover letter from markdown.")
     ap.add_argument("kind", choices=["resume", "cover"])
     ap.add_argument("source", type=Path)
@@ -217,14 +251,24 @@ def main(argv=None):
     ap.add_argument("--no-pdf", action="store_true", help="skip PDF export")
     args = ap.parse_args(argv)
 
-    text = args.source.read_text(encoding="utf-8")
+    if not args.source.is_file():
+        print(f"ERROR: can't find {args.source}")
+        return 1
+    text = args.source.read_text(encoding="utf-8-sig")
     out = args.output or args.source.with_suffix(".docx")
-    if args.kind == "resume":
-        blocks, warnings = parse_resume(text)
-        render_resume(blocks, out)
-    else:
-        blocks, warnings = parse_cover(text)
-        render_cover(blocks, out)
+    if not out.suffix:
+        out = out.with_suffix(".docx")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        if args.kind == "resume":
+            blocks, warnings = parse_resume(text)
+            render_resume(blocks, out)
+        else:
+            blocks, warnings = parse_cover(text)
+            render_cover(blocks, out)
+    except PermissionError:
+        print(f"ERROR: can't write {out}. If it's open in Word, close it and run again.")
+        return 1
 
     for w in warnings:
         print(f"WARNING: {w}")
@@ -233,7 +277,7 @@ def main(argv=None):
     if pdf:
         print(f"Wrote {pdf} ({count_pdf_pages(pdf)} pages)")
     else:
-        print(f"Estimated length: {estimate_pages(blocks):.1f} pages "
+        print(f"Estimated length: {max(0.1, estimate_pages(blocks)):.1f} pages "
               "(install LibreOffice for PDF export and an exact page count)")
     return 0
 

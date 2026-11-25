@@ -158,3 +158,121 @@ def test_cli_output_flag(tmp_path):
     dst = tmp_path / "Sam-Rivera-Cover.docx"
     assert b.main(["cover", str(src), "-o", str(dst), "--no-pdf"]) == 0
     assert dst.exists()
+
+
+# --- review findings ---
+
+def test_cli_survives_cp1252_stdout(tmp_path, monkeypatch):
+    import io
+    monkeypatch.setattr(sys, "stdout", io.TextIOWrapper(io.BytesIO(), encoding="cp1252"))
+    src = tmp_path / "resume.md"
+    src.write_text("# Sam\nCity | e\n> quote \u2192 x\n", encoding="utf-8")
+    assert b.main(["resume", str(src), "--no-pdf"]) == 0
+
+
+def test_parse_strips_bom():
+    blocks, _ = b.parse_resume("\ufeff# Sam\nCity | e\n")
+    assert blocks == [("name", "Sam"), ("contact", "City | e")]
+    blocks, _ = b.parse_cover("\ufeff# Sam\nCity | e\n")
+    assert blocks == [("name", "Sam"), ("contact", "City | e")]
+
+
+def test_cli_reads_bom_file(tmp_path):
+    src = tmp_path / "resume.md"
+    src.write_bytes("\ufeff# Sam\nCity | e\n".encode("utf-8"))
+    assert b.main(["resume", str(src), "--no-pdf"]) == 0
+    assert Document(str(tmp_path / "resume.docx")).paragraphs[0].text == "Sam"
+
+
+def test_find_soffice_env_var_wins(tmp_path, monkeypatch):
+    exe = tmp_path / "soffice.exe"
+    exe.write_text("")
+    monkeypatch.setenv("SOFFICE", str(exe))
+    monkeypatch.setattr(b.shutil, "which", lambda name: "/usr/bin/" + name)
+    assert b.find_soffice() == str(exe)
+
+
+def test_find_soffice_known_path(tmp_path, monkeypatch):
+    exe = tmp_path / "soffice.exe"
+    exe.write_text("")
+    monkeypatch.delenv("SOFFICE", raising=False)
+    monkeypatch.setattr(b.shutil, "which", lambda name: None)
+    monkeypatch.setattr(b, "SOFFICE_CANDIDATES", [str(tmp_path / "missing.exe"), str(exe)])
+    assert b.find_soffice() == str(exe)
+
+
+def test_find_soffice_none(tmp_path, monkeypatch):
+    monkeypatch.delenv("SOFFICE", raising=False)
+    monkeypatch.setattr(b.shutil, "which", lambda name: None)
+    monkeypatch.setattr(b, "SOFFICE_CANDIDATES", [str(tmp_path / "missing.exe")])
+    assert b.find_soffice() is None
+
+
+def test_export_pdf_removes_stale_pdf(tmp_path, monkeypatch):
+    monkeypatch.setattr(b, "find_soffice", lambda: "soffice")
+    monkeypatch.setattr(b.subprocess, "run", lambda *a, **k: None)
+    docx = tmp_path / "x.docx"
+    docx.write_bytes(b"")
+    stale = tmp_path / "x.pdf"
+    stale.write_bytes(b"old")
+    assert b.export_pdf(docx) is None
+    assert not stale.exists()
+
+
+def test_cli_missing_source(tmp_path, capsys):
+    missing = tmp_path / "nope.md"
+    assert b.main(["resume", str(missing), "--no-pdf"]) == 1
+    assert f"ERROR: can't find {missing}" in capsys.readouterr().out
+
+
+def test_cli_creates_output_folder(tmp_path):
+    src = tmp_path / "cover.md"
+    src.write_text(COVER, encoding="utf-8")
+    dst = tmp_path / "new" / "sub" / "cover.docx"
+    assert b.main(["cover", str(src), "-o", str(dst), "--no-pdf"]) == 0
+    assert dst.exists()
+
+
+def test_cli_permission_error(tmp_path, monkeypatch, capsys):
+    src = tmp_path / "resume.md"
+    src.write_text(SAMPLE, encoding="utf-8")
+
+    def boom(*a, **k):
+        raise PermissionError("locked")
+
+    monkeypatch.setattr(b, "render_resume", boom)
+    assert b.main(["resume", str(src), "--no-pdf"]) == 1
+    out = capsys.readouterr().out
+    assert "ERROR: can't write" in out and "close it and run again" in out
+
+
+def test_missing_contact_line_warns():
+    blocks, warnings = b.parse_resume("# Sam\n- Built things\n## SKILLS\n")
+    assert blocks == [("name", "Sam"), ("bullet", "Built things"), ("section", "SKILLS")]
+    assert warnings == ["line 2: no contact line after name"]
+    blocks, warnings = b.parse_resume("# Sam\n**Analyst** | 2020\n")
+    assert kinds(blocks) == ["name", "job"] and len(warnings) == 1
+    blocks, warnings = b.parse_resume("# Sam\n---\n")
+    assert kinds(blocks) == ["name"] and "no contact line" in warnings[0]
+
+
+def test_stray_asterisks_warn():
+    _, warnings = b.parse_resume("- Built **things\n")
+    assert warnings == ["line 1: stray * (unclosed bold or *italic*), check formatting"]
+    _, warnings = b.parse_resume("Some *italic* text\n")
+    assert warnings == ["line 1: stray * (unclosed bold or *italic*), check formatting"]
+    _, warnings = b.parse_resume("- Built **many** things\n")
+    assert warnings == []
+
+
+def test_count_pdf_pages_ignores_page_label(tmp_path):
+    pdf = tmp_path / "x.pdf"
+    pdf.write_bytes(b"<< /Type /Page >> << /Type /PageLabel >> << /Type /Pages >>")
+    assert b.count_pdf_pages(pdf) == 1
+
+
+def test_cli_output_without_extension(tmp_path):
+    src = tmp_path / "cover.md"
+    src.write_text(COVER, encoding="utf-8")
+    assert b.main(["cover", str(src), "-o", str(tmp_path / "Sam-Cover"), "--no-pdf"]) == 0
+    assert (tmp_path / "Sam-Cover.docx").exists()
